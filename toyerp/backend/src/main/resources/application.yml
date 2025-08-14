@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: TOYERP
+  datasource:
+    url: jdbc:postgresql://localhost:5432/TOYERP
+    username: toyerp
+    password: toyerp_pw
+    driver-class-name: org.postgresql.Driver
+
+  mybatis:
+    config-location: classpath:mybatis/mybatis-config.xml
+    mapper-locations: classpath*:com/example/toyerp/**/xml/*Mapper.xml
+    
+    type-aliases-package: com.example.toyerp.domain
+
+server:
+  port: 8080
