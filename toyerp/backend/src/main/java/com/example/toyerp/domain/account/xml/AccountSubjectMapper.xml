@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 1) 인터페이스 FQCN과 정확히 일치 -->
+<mapper namespace="com.example.toyerp.domain.account.mapper.AccountSubjectMapper">
+
+  <!-- 2) resultType은 실제 VO/DTO 경로로 -->
+  <select id="getAllAccountSubjects"
+          resultType="com.example.toyerp.domain.account.vo.AccountSubjectVO">
+    SELECT id, name, type, details
+    FROM account_subject
+    ORDER BY id
+  </select>
+
+  <!-- code가 정수면 int, 문자열이면 string -->
+  <select id="getAccountSubjectByCode"
+          parameterType="int"
+          resultType="com.example.toyerp.domain.account.vo.AccountSubjectVO">
+    SELECT code, name, type, description
+    FROM account_subject
+    WHERE code = #{code}
+  </select>
+
+  <insert id="insertAccountSubject"
+          parameterType="com.example.toyerp.domain.account.vo.AccountSubjectVO">
+    INSERT INTO account_subject (code, name, type, description)
+    VALUES (#{code}, #{name}, #{type}, #{description})
+  </insert>
+
+  <update id="updateAccountSubject"
+          parameterType="com.example.toyerp.domain.account.vo.AccountSubjectVO">
+    UPDATE account_subject
+    SET name = #{name}, type = #{type}, description = #{description}
+    WHERE code = #{code}
+  </update>
+
+  <delete id="deleteAccountSubject" parameterType="int">
+    DELETE FROM account_subject
+    WHERE code = #{code}
+  </delete>
+
+</mapper>
