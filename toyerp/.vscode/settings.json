@@ -1,10 +1,6 @@
 {
-<<<<<<< HEAD
-    "java.compile.nullAnalysis.mode": "automatic"
-=======
   "java.project.sourcePaths": [
     "backend/src/main/java"
   ],
   "java.configuration.updateBuildConfiguration": "automatic"
->>>>>>> 852a420d8390f554bb7e62f324f09ead47c0afe5
 }
