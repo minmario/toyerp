@@ -15,25 +15,25 @@
   </select>
 
   <!-- code가 정수면 int, 문자열이면 string -->
-  <select id="getAccountSubjectByCode"
+  <select id="getAccountSubjectBy"
           parameterType="int"
           resultType="com.example.toyerp.domain.account.vo.AccountSubjectVO">
-    SELECT code, name, type, description
+    SELECT id, name, type, description
     FROM account_subject
-    WHERE code = #{code}
+    WHERE id = #{id}
   </select>
 
   <insert id="insertAccountSubject"
           parameterType="com.example.toyerp.domain.account.vo.AccountSubjectVO">
-    INSERT INTO account_subject (code, name, type, description)
-    VALUES (#{code}, #{name}, #{type}, #{description})
+    INSERT INTO account_subject (id, name, type, details)
+    VALUES (#{id}, #{name}, #{type}, #{details})
   </insert>
 
   <update id="updateAccountSubject"
           parameterType="com.example.toyerp.domain.account.vo.AccountSubjectVO">
     UPDATE account_subject
-    SET name = #{name}, type = #{type}, description = #{description}
-    WHERE code = #{code}
+    SET name = #{name}, type = #{type}, details = #{details}
+    WHERE id = #{id}
   </update>
 
   <delete id="deleteAccountSubject" parameterType="int">

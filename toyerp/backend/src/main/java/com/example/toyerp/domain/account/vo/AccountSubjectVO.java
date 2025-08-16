@@ -11,7 +11,7 @@ public class AccountSubjectVO {
     private int id;
     private String name;
     private String type;
-    private String description;
+    private String details;
 
     // getter/setter
 
