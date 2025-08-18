@@ -1,18 +1,19 @@
 package com.example.toyerp.domain.account.vo;
 
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
-@Data
-@NoArgsConstructor
 @AllArgsConstructor
+@NoArgsConstructor
+@Getter
+@Setter
 public class AccountSubjectVO {
+
     private int id;
     private String name;
     private String type;
     private String details;
-
-    // getter/setter
 
 }
