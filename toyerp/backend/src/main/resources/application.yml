@@ -11,6 +11,6 @@ server:
   port: 8080
 mybatis:
   config-location: classpath:mybatis/mybatis-config.xml
-  mapper-locations: classpath*:mapper/*Mapper.xml
+  mapper-locations: classpath:mybatis/mapper/*Mapper.xml
 
   type-aliases-package: com.example.toyerp.domain
