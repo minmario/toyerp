@@ -10,11 +10,40 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Plus, Trash2, Save, Search, Eye, Edit, FileText } from "lucide-react"
+
+// 타입 정의 추가
+interface JournalEntry {
+  id: number;
+  account: string;
+  accountName: string;
+  debit: number;
+  credit: number;
+  description: string;
+}
+
+interface Journal {
+  id: string;
+  date: string;
+  description: string;
+  reference: string;
+  status: string;
+  entries: JournalEntry[];
+  totalDebit: number;
+  totalCredit: number;
+  createdBy: string;
+  createdAt: string;
+}
+
+interface Account {
+  code: string;
+  name: string;
+}
 
 export function JournalEntry() {
   // 저장된 전표 목록
-  const [savedJournals, setSavedJournals] = useState([
+  const [savedJournals, setSavedJournals] = useState<Journal[]>([
     {
       id: "JE-2024-001",
       date: "2024-01-15",
@@ -63,7 +92,7 @@ export function JournalEntry() {
   ])
 
   // 현재 작성 중인 전표
-  const [journalEntries, setJournalEntries] = useState([
+  const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([
     { id: 1, account: "", accountName: "", debit: 0, credit: 0, description: "" },
     { id: 2, account: "", accountName: "", debit: 0, credit: 0, description: "" },
   ])
@@ -76,10 +105,11 @@ export function JournalEntry() {
 
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("전체")
-  const [selectedJournal, setSelectedJournal] = useState(null)
+  const [selectedJournal, setSelectedJournal] = useState<Journal | null>(null)
   const [activeTab, setActiveTab] = useState("list")
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
 
-  const accounts = [
+  const accounts: Account[] = [
     { code: "1100", name: "현금" },
     { code: "1200", name: "예금" },
     { code: "1300", name: "매출채권" },
@@ -121,6 +151,20 @@ export function JournalEntry() {
             const account = accounts.find((acc) => acc.code === value)
             updated.accountName = account ? account.name : ""
           }
+          // 숫자 필드에 대해 음수 방지 및 차변/대변 상호 배제 로직
+          if (field === "debit") {
+            const numValue = Math.max(0, Number(value) || 0) // 음수 방지
+            updated.debit = numValue
+            if (numValue > 0) {
+              updated.credit = 0
+            }
+          } else if (field === "credit") {
+            const numValue = Math.max(0, Number(value) || 0) // 음수 방지
+            updated.credit = numValue
+            if (numValue > 0) {
+              updated.debit = 0
+            }
+          }
           return updated
         }
         return entry
@@ -139,7 +183,7 @@ export function JournalEntry() {
     }
 
     const journalId = `JE-2024-${String(savedJournals.length + 1).padStart(3, "0")}`
-    const newJournal = {
+    const newJournal: Journal = {
       id: journalId,
       date: entryData.date,
       description: entryData.description,
@@ -169,18 +213,19 @@ export function JournalEntry() {
     setActiveTab("list")
   }
 
-  const viewJournal = (journal) => {
+  const viewJournal = (journal: Journal) => {
     setSelectedJournal(journal)
-    setActiveTab("view")
+    setIsDetailModalOpen(true)
   }
 
-  const editJournal = (journal) => {
+  const editJournal = (journal: Journal) => {
     setEntryData({
       date: journal.date,
       description: journal.description,
       reference: journal.reference,
     })
     setJournalEntries(journal.entries)
+    setIsDetailModalOpen(false)
     setActiveTab("create")
   }
 
@@ -223,11 +268,10 @@ export function JournalEntry() {
         <TabsList>
           <TabsTrigger value="list">전표 목록</TabsTrigger>
           <TabsTrigger value="create">전표 작성</TabsTrigger>
-          {selectedJournal && <TabsTrigger value="view">전표 상세</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="list">
-          <Card>
+          <Card className="shadow-lg border-0">
             <CardHeader>
               <CardTitle>전표 목록</CardTitle>
               <CardDescription>등록된 전표들을 확인하고 관리하세요</CardDescription>
@@ -302,7 +346,7 @@ export function JournalEntry() {
 
         <TabsContent value="create">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <Card>
+            <Card className="shadow-lg border-0">
               <CardHeader>
                 <CardTitle>전표 정보</CardTitle>
                 <CardDescription>전표의 기본 정보를 입력하세요</CardDescription>
@@ -339,7 +383,7 @@ export function JournalEntry() {
               </CardContent>
             </Card>
 
-            <Card className="lg:col-span-2">
+            <Card className="lg:col-span-2 shadow-lg border-0">
               <CardHeader>
                 <CardTitle className="flex justify-between items-center">
                   분개 입력
@@ -383,6 +427,7 @@ export function JournalEntry() {
                         <TableCell>
                           <Input
                             type="number"
+                            min="0"
                             value={entry.debit || ""}
                             onChange={(e) => updateJournalLine(entry.id, "debit", Number(e.target.value))}
                             placeholder="0"
@@ -392,6 +437,7 @@ export function JournalEntry() {
                         <TableCell>
                           <Input
                             type="number"
+                            min="0"
                             value={entry.credit || ""}
                             onChange={(e) => updateJournalLine(entry.id, "credit", Number(e.target.value))}
                             placeholder="0"
@@ -446,35 +492,45 @@ export function JournalEntry() {
             </Card>
           </div>
         </TabsContent>
+      </Tabs>
 
-        {selectedJournal && (
-          <TabsContent value="view">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  전표 상세 - {selectedJournal.id}
-                  <Badge className={getStatusColor(selectedJournal.status)}>{selectedJournal.status}</Badge>
-                </CardTitle>
-                <CardDescription>
+      {/* 전표 상세 모달 */}
+      <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              전표 상세 - {selectedJournal?.id}
+              {selectedJournal && (
+                <Badge className={getStatusColor(selectedJournal.status)}>{selectedJournal.status}</Badge>
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedJournal && (
+                <>
                   작성일: {selectedJournal.createdAt} | 작성자: {selectedJournal.createdBy}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">전표일자</Label>
-                    <p className="text-lg font-medium">{selectedJournal.date}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">전표번호</Label>
-                    <p className="text-lg font-medium">{selectedJournal.reference}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-600">적요</Label>
-                    <p className="text-lg font-medium">{selectedJournal.description}</p>
-                  </div>
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedJournal && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">전표일자</Label>
+                  <p className="text-lg font-medium">{selectedJournal.date}</p>
                 </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">전표번호</Label>
+                  <p className="text-lg font-medium">{selectedJournal.reference}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-gray-600">적요</Label>
+                  <p className="text-lg font-medium">{selectedJournal.description}</p>
+                </div>
+              </div>
 
+              <div>
+                <h3 className="text-lg font-semibold mb-4">분개 내역</h3>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -485,7 +541,7 @@ export function JournalEntry() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {selectedJournal.entries.map((entry, index) => (
+                    {selectedJournal.entries.map((entry: JournalEntry, index: number) => (
                       <TableRow key={index}>
                         <TableCell>
                           {entry.account} - {entry.accountName}
@@ -507,23 +563,23 @@ export function JournalEntry() {
                     </TableRow>
                   </TableBody>
                 </Table>
+              </div>
 
-                <div className="flex gap-2 mt-6">
-                  {selectedJournal.status === "임시저장" && (
-                    <Button onClick={() => editJournal(selectedJournal)} className="gap-2">
-                      <Edit className="h-4 w-4" />
-                      수정하기
-                    </Button>
-                  )}
-                  <Button variant="outline" onClick={() => setActiveTab("list")} className="bg-transparent">
-                    목록으로
+              <div className="flex gap-2 pt-4 border-t">
+                {selectedJournal.status === "임시저장" && (
+                  <Button onClick={() => editJournal(selectedJournal)} className="gap-2">
+                    <Edit className="h-4 w-4" />
+                    수정하기
                   </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        )}
-      </Tabs>
+                )}
+                <Button variant="outline" onClick={() => setIsDetailModalOpen(false)} className="bg-transparent">
+                  닫기
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -1,12 +1,12 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -14,88 +14,249 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, Search, Edit, Trash2 } from "lucide-react"
+} from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, Search, Edit, Trash2 } from "lucide-react";
+import { useEffect } from "react";
+
+/** ---------- 타입 선언 ---------- */
+type AccountType = "ASSET" | "LIABILITY" | "EQUITY" | "REVENUE" | "EXPENSE";
+type FilterType = "전체" | AccountType;
+
+interface Account {
+  id: number;
+  code: string;
+  name: string;
+  type: AccountType;
+  details: string;
+}
+
+interface NewAccount {
+  code: string;
+  name: string;
+  // 새로 추가할 때는 아직 미선택일 수 있으므로 '' 허용
+  type: AccountType | "";
+  details: string;
+}
+/** -------------------------------- */
+
+// 영어 -> 한국어 변환 함수
+const getKoreanType = (type: AccountType): string => {
+  switch (type) {
+    case "ASSET":
+      return "자산";
+    case "LIABILITY":
+      return "부채";
+    case "EQUITY":
+      return "자본";
+    case "REVENUE":
+      return "수익";
+    case "EXPENSE":
+      return "비용";
+    default:
+      return type;
+  }
+};
+
+// 한국어 -> 영어 변환 함수 (새로 추가할 때 사용)
+const getEnglishType = (koreanType: string): AccountType => {
+  switch (koreanType) {
+    case "자산":
+      return "ASSET";
+    case "부채":
+      return "LIABILITY";
+    case "자본":
+      return "EQUITY";
+    case "수익":
+      return "REVENUE";
+    case "비용":
+      return "EXPENSE";
+    default:
+      return koreanType as AccountType;
+  }
+};
 
 export function AccountManagement() {
-  const [accounts, setAccounts] = useState([
-    { code: "1100", name: "현금", type: "자산", description: "현금 및 현금성 자산" },
-    { code: "1200", name: "예금", type: "자산", description: "은행 예금" },
-    { code: "1300", name: "매출채권", type: "자산", description: "고객으로부터 받을 돈" },
-    { code: "1400", name: "재고자산", type: "자산", description: "판매용 상품 재고" },
-    { code: "2100", name: "매입채무", type: "부채", description: "공급업체에 지불할 돈" },
-    { code: "2200", name: "단기차입금", type: "부채", description: "1년 이내 상환 차입금" },
-    { code: "3100", name: "자본금", type: "자본", description: "회사 자본금" },
-    { code: "4100", name: "매출", type: "수익", description: "상품 판매 수익" },
-    { code: "5100", name: "매출원가", type: "비용", description: "상품 판매 원가" },
-    { code: "6100", name: "급여", type: "비용", description: "직원 급여 비용" },
-  ])
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  
+  useEffect(() => {
+    fetch("http://localhost:8080/api/accounts")
+      .then((res) => res.json())
+      .then((data: Account[]) => {
+        setAccounts(data);
+      })
+      .catch((err) => {
+        console.error("계정과목 불러오기 실패:", err);
+      });
+  }, []);
 
-  const [newAccount, setNewAccount] = useState({
+  const [newAccount, setNewAccount] = useState<NewAccount>({
     code: "",
     name: "",
     type: "",
-    description: "",
-  })
+    details: "",
+  });
 
-  const [editingAccount, setEditingAccount] = useState(null)
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [editingAccount, setEditingAccount] = useState<Account | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
-  const [searchTerm, setSearchTerm] = useState("")
-  const [filterType, setFilterType] = useState("전체")
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterType, setFilterType] = useState<FilterType>("전체");
 
-  const handleAddAccount = () => {
-    setAccounts([...accounts, newAccount])
-    setNewAccount({ code: "", name: "", type: "", description: "" })
-    setIsDialogOpen(false)
-  }
-
-  const handleEditAccount = (account) => {
-    setEditingAccount({ ...account })
-    setIsEditDialogOpen(true)
-  }
-
-  const handleUpdateAccount = () => {
-    setAccounts(accounts.map((account) => (account.code === editingAccount.code ? editingAccount : account)))
-    setEditingAccount(null)
-    setIsEditDialogOpen(false)
-    alert("계정과목이 수정되었습니다.")
-  }
-
-  const handleDeleteAccount = (accountCode) => {
-    if (confirm("정말로 이 계정과목을 삭제하시겠습니까?\n삭제된 계정과목은 복구할 수 없습니다.")) {
-      setAccounts(accounts.filter((account) => account.code !== accountCode))
-      alert("계정과목이 삭제되었습니다.")
+const handleAddAccount = async () => {
+    // 간단한 유효성 체크
+    if (!newAccount.code || !newAccount.name || !newAccount.type) {
+      alert("계정코드, 계정명, 계정유형을 입력해주세요.");
+      return;
     }
+
+    try {
+      const response = await fetch("http://localhost:8080/api/accounts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          code: parseInt(newAccount.code),
+          name: newAccount.name,
+          type: newAccount.type,
+          details: newAccount.details,
+        }),
+      });
+
+      if (response.ok) {
+        const message = await response.text();
+        alert(message);
+        
+        // 성공적으로 저장되면 목록을 새로고침
+        const updatedAccounts = await fetch("http://localhost:8080/api/accounts")
+          .then((res) => res.json());
+        setAccounts(updatedAccounts);
+        
+        // 폼 초기화
+        setNewAccount({ code: "", name: "", type: "", details: "" });
+        setIsDialogOpen(false);
+      } else {
+        const errorMessage = await response.text();
+        alert(`오류: ${errorMessage}`);
+      }
+    } catch (error) {
+      console.error("계정과목 등록 실패:", error);
+      alert("서버 연결에 실패했습니다. 다시 시도해주세요.");
+    }
+  };
+
+  const handleEditAccount = (account: Account) => {
+    setEditingAccount({ ...account });
+    setIsEditDialogOpen(true);
+  };
+
+const handleUpdateAccount = async () => {
+  if (!editingAccount) return;
+
+  // 간단한 유효성 체크
+  if (!editingAccount.code || !editingAccount.name || !editingAccount.type) {
+    alert("계정코드, 계정명, 계정유형을 입력해주세요.");
+    return;
   }
 
-  const filteredAccounts = accounts.filter((account) => {
+  try {
+    const response = await fetch(`http://localhost:8080/api/accounts/update`, {
+      method: "POST",  // PUT에서 POST로 변경
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        id: editingAccount.id,  // id 추가
+        code: parseInt(editingAccount.code),
+        name: editingAccount.name,
+        type: editingAccount.type,
+        details: editingAccount.details,
+      }),
+    });
+
+    if (response.ok) {
+      const message = await response.text();
+      alert(message);
+      
+      // 성공적으로 수정되면 목록을 새로고침
+      const updatedAccounts = await fetch("http://localhost:8080/api/accounts")
+        .then((res) => res.json());
+      setAccounts(updatedAccounts);
+      
+      setEditingAccount(null);
+      setIsEditDialogOpen(false);
+    } else {
+      const errorMessage = await response.text();
+      alert(`오류: ${errorMessage}`);
+    }
+  } catch (error) {
+    console.error("계정과목 수정 실패:", error);
+    alert("서버 연결에 실패했습니다. 다시 시도해주세요.");
+  }
+}
+
+  const handleDeleteAccount = async (accountId: number) => {
+    if (confirm("정말로 이 계정과목을 삭제하시겠습니까?\n삭제된 계정과목은 복구할 수 없습니다.")) {
+      try {
+        const response = await fetch("http://localhost:8080/api/accounts/delete", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            id: accountId,
+          }),
+        });
+
+        if (response.ok) {
+          const message = await response.text();
+          alert(message);
+          
+          // 성공적으로 삭제되면 목록을 새로고침
+          const updatedAccounts = await fetch("http://localhost:8080/api/accounts")
+            .then((res) => res.json());
+          setAccounts(updatedAccounts);
+        } else {
+          const errorMessage = await response.text();
+          alert(`오류: ${errorMessage}`);
+        }
+      } catch (error) {
+        console.error("계정과목 삭제 실패:", error);
+        alert("서버 연결에 실패했습니다. 다시 시도해주세요.");
+      }
+    }
+  };
+
+  const filteredAccounts: Account[] = accounts.filter((account) => {
+    const koreanType = getKoreanType(account.type);
     const matchesSearch =
       account.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      account.code.includes(searchTerm) ||
-      account.description.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesType = filterType === "전체" || account.type === filterType
-    return matchesSearch && matchesType
-  })
+      account.code.toString().includes(searchTerm) ||
+      account.details.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      koreanType.toLowerCase().includes(searchTerm.toLowerCase()); // 한국어 유형으로도 검색 가능
 
-  const getTypeColor = (type: string) => {
+    const matchesType = filterType === "전체" || account.type === filterType;
+    return matchesSearch && matchesType;
+  });
+
+  const getTypeColor = (type: AccountType) => {
     switch (type) {
-      case "자산":
-        return "bg-blue-100 text-blue-800"
-      case "부채":
-        return "bg-red-100 text-red-800"
-      case "자본":
-        return "bg-green-100 text-green-800"
-      case "수익":
-        return "bg-purple-100 text-purple-800"
-      case "비용":
-        return "bg-orange-100 text-orange-800"
+      case "ASSET":
+        return "bg-blue-100 text-blue-800";
+      case "LIABILITY":
+        return "bg-red-100 text-red-800";
+      case "EQUITY":
+        return "bg-green-100 text-green-800";
+      case "REVENUE":
+        return "bg-purple-100 text-purple-800";
+      case "EXPENSE":
+        return "bg-orange-100 text-orange-800";
       default:
-        return "bg-gray-100 text-gray-800"
+        return "bg-gray-100 text-gray-800";
     }
-  }
+  };
 
   return (
     <div className="space-y-6">
@@ -119,9 +280,9 @@ export function AccountManagement() {
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="code">계정코드</Label>
+                <Label htmlFor="id">계정코드</Label>
                 <Input
-                  id="code"
+                  id="id"
                   value={newAccount.code}
                   onChange={(e) => setNewAccount({ ...newAccount, code: e.target.value })}
                   placeholder="1500"
@@ -139,8 +300,10 @@ export function AccountManagement() {
               <div className="space-y-2">
                 <Label htmlFor="type">계정유형</Label>
                 <Select
-                  value={newAccount.type}
-                  onValueChange={(value) => setNewAccount({ ...newAccount, type: value })}
+                  value={newAccount.type ? getKoreanType(newAccount.type as AccountType) : ""}
+                  onValueChange={(value) =>
+                    setNewAccount({ ...newAccount, type: getEnglishType(value) })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="유형 선택" />
@@ -158,8 +321,8 @@ export function AccountManagement() {
                 <Label htmlFor="description">설명</Label>
                 <Input
                   id="description"
-                  value={newAccount.description}
-                  onChange={(e) => setNewAccount({ ...newAccount, description: e.target.value })}
+                  value={newAccount.details}
+                  onChange={(e) => setNewAccount({ ...newAccount, details: e.target.value })}
                   placeholder="계정과목에 대한 설명"
                 />
               </div>
@@ -183,26 +346,30 @@ export function AccountManagement() {
                   <Input
                     id="edit-code"
                     value={editingAccount.code}
-                    onChange={(e) => setEditingAccount({ ...editingAccount, code: e.target.value })}
-                    disabled
-                    className="bg-gray-50"
+                    onChange={(e) =>
+                      setEditingAccount({ ...editingAccount, code: e.target.value })
+                    }
+                    placeholder="1500"
                   />
-                  <p className="text-xs text-gray-500">계정코드는 수정할 수 없습니다</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-name">계정명</Label>
                   <Input
                     id="edit-name"
                     value={editingAccount.name}
-                    onChange={(e) => setEditingAccount({ ...editingAccount, name: e.target.value })}
+                    onChange={(e) =>
+                      setEditingAccount({ ...editingAccount, name: e.target.value })
+                    }
                     placeholder="유형자산"
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-type">계정유형</Label>
                   <Select
-                    value={editingAccount.type}
-                    onValueChange={(value) => setEditingAccount({ ...editingAccount, type: value })}
+                    value={getKoreanType(editingAccount.type)}
+                    onValueChange={(value) =>
+                      setEditingAccount({ ...editingAccount, type: getEnglishType(value) })
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="유형 선택" />
@@ -220,8 +387,10 @@ export function AccountManagement() {
                   <Label htmlFor="edit-description">설명</Label>
                   <Input
                     id="edit-description"
-                    value={editingAccount.description}
-                    onChange={(e) => setEditingAccount({ ...editingAccount, description: e.target.value })}
+                    value={editingAccount.details}
+                    onChange={(e) =>
+                      setEditingAccount({ ...editingAccount, details: e.target.value })
+                    }
                     placeholder="계정과목에 대한 설명"
                   />
                 </div>
@@ -251,23 +420,23 @@ export function AccountManagement() {
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
-                placeholder="계정명, 코드로 검색..."
+                placeholder="계정명, 코드, 유형으로 검색..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
               />
             </div>
-            <Select value={filterType} onValueChange={setFilterType}>
+            <Select value={filterType} onValueChange={(v) => setFilterType(v as FilterType)}>
               <SelectTrigger className="w-32">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="전체">전체</SelectItem>
-                <SelectItem value="자산">자산</SelectItem>
-                <SelectItem value="부채">부채</SelectItem>
-                <SelectItem value="자본">자본</SelectItem>
-                <SelectItem value="수익">수익</SelectItem>
-                <SelectItem value="비용">비용</SelectItem>
+                <SelectItem value="ASSET">자산</SelectItem>
+                <SelectItem value="LIABILITY">부채</SelectItem>
+                <SelectItem value="EQUITY">자본</SelectItem>
+                <SelectItem value="REVENUE">수익</SelectItem>
+                <SelectItem value="EXPENSE">비용</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -284,14 +453,16 @@ export function AccountManagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredAccounts.map((account) => (
-                <TableRow key={account.code}>
+              {filteredAccounts.map((account: Account) => (
+                <TableRow key={account.id}>
                   <TableCell className="font-medium">{account.code}</TableCell>
                   <TableCell>{account.name}</TableCell>
                   <TableCell>
-                    <Badge className={getTypeColor(account.type)}>{account.type}</Badge>
+                    <Badge className={getTypeColor(account.type)}>
+                      {getKoreanType(account.type)}
+                    </Badge>
                   </TableCell>
-                  <TableCell className="text-gray-600">{account.description}</TableCell>
+                  <TableCell className="text-gray-600">{account.details}</TableCell>
                   <TableCell>
                     <div className="flex gap-1">
                       <Button variant="ghost" size="icon" onClick={() => handleEditAccount(account)} title="수정">
@@ -300,7 +471,7 @@ export function AccountManagement() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => handleDeleteAccount(account.code)}
+                        onClick={() => handleDeleteAccount(account.id)}
                         className="text-red-600 hover:text-red-700 hover:bg-red-50"
                         title="삭제"
                       >
@@ -315,5 +486,5 @@ export function AccountManagement() {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

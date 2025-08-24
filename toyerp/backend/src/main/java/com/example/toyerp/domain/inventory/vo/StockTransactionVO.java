@@ -1,21 +1,21 @@
-package com.example.toyerp.domain.account.vo;
+package com.example.toyerp.domain.inventory.vo;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import java.time.LocalDate;
 
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
 @Setter
-public class AccountSubjectVO {
-
+public class StockTransactionVO {
     private int id;
-    private int code;
-    private String name;
-    private String type;
+    private int productId;
+    private String transactionType;
+    private int quantity;
+    private LocalDate transactionDate;
     private String details;
     private int isDel;
-
 }
