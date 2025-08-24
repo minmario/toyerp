@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.example.toyerp.domain.inventory.mapper.StockTransactionMapper">
+
+  <!-- 전체 재고 거래 조회 (삭제되지 않은 것만) -->
+  <select id="getAllTransactions"
+          resultType="com.example.toyerp.domain.inventory.vo.StockTransactionVO">
+    SELECT id, product_id, transaction_type, quantity, transaction_date, details, is_del
+    FROM stock_transaction
+    WHERE is_del = 0
+    ORDER BY transaction_date DESC, id DESC
+  </select>
+
+  <!-- ID로 재고 거래 조회 (삭제되지 않은 것만) -->
+  <select id="getTransactionById"
+          parameterType="int"
+          resultType="com.example.toyerp.domain.inventory.vo.StockTransactionVO">
+    SELECT id, product_id, transaction_type, quantity, transaction_date, details, is_del
+    FROM stock_transaction
+    WHERE id = #{id} AND is_del = 0
+  </select>
+
+  <!-- 제품 ID로 재고 거래 조회 (삭제되지 않은 것만) -->
+  <select id="getTransactionsByProductId"
+          parameterType="int"
+          resultType="com.example.toyerp.domain.inventory.vo.StockTransactionVO">
+    SELECT id, product_id, transaction_type, quantity, transaction_date, details, is_del
+    FROM stock_transaction
+    WHERE product_id = #{productId} AND is_del = 0
+    ORDER BY transaction_date DESC, id DESC
+  </select>
+
+  <!-- 거래 유형으로 조회 (삭제되지 않은 것만) -->
+  <select id="getTransactionsByType"
+          parameterType="string"
+          resultType="com.example.toyerp.domain.inventory.vo.StockTransactionVO">
+    SELECT id, product_id, transaction_type, quantity, transaction_date, details, is_del
+    FROM stock_transaction
+    WHERE transaction_type = #{transactionType} AND is_del = 0
+    ORDER BY transaction_date DESC, id DESC
+  </select>
+
+    <!-- 입출고(재고 거래) 추가 -->
+ <insert id="insertTransaction"
+        parameterType="com.example.toyerp.domain.inventory.dto.request.StockTransactionCreateRequest">
+  INSERT INTO stock_transaction (
+    product_id,
+    transaction_type,
+    quantity,
+    transaction_date,
+    details,
+    is_del
+  )
+  VALUES (
+    #{productId},
+    CAST(#{transactionType} AS stock_transaction_type),  <!-- ★ 핵심 -->
+    #{quantity},
+    COALESCE(#{transactionDate}, CURRENT_DATE),
+    #{details},
+    0
+  )
+</insert>
+
+<update id="updateTransaction"
+        parameterType="com.example.toyerp.domain.inventory.dto.request.StockTransactionUpdateRequest">
+  UPDATE stock_transaction
+  SET
+    product_id = #{productId},
+    transaction_type = CAST(#{transactionType} AS stock_transaction_type),
+    quantity = #{quantity},
+    transaction_date = COALESCE(#{transactionDate}, transaction_date),
+    details = #{details}
+  WHERE id = #{id} AND is_del = 0
+</update>
+
+<select id="selectCurrentStock" resultType="long">
+  SELECT COALESCE(SUM(
+    CASE
+      WHEN transaction_type = 'IN'  THEN quantity
+      WHEN transaction_type = 'OUT' THEN -quantity
+    END
+  ), 0)
+  FROM stock_transaction
+  WHERE product_id = #{productId}
+    AND is_del = 0
+</select>
+
+</mapper>

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- 1) 인터페이스 FQCN과 정확히 일치 -->
+<mapper namespace="com.example.toyerp.domain.account.mapper.AccountSubjectMapper">
+
+  <!-- 2) resultType은 실제 VO/DTO 경로로 -->
+  <select id="getAllAccountSubjects"
+          resultType="com.example.toyerp.domain.account.vo.AccountSubjectVO">
+    SELECT id, code, name, type, details, is_del
+    FROM account_subject
+    WHERE is_del = 0
+    ORDER BY id
+  </select>
+
+  <!-- code가 정수면 int, 문자열이면 string -->
+  <select id="getAccountSubjectById"
+          parameterType="int"
+          resultType="com.example.toyerp.domain.account.vo.AccountSubjectVO">
+    SELECT id, code, name, type, details, is_del
+    FROM account_subject
+    WHERE id = #{id}
+  </select>
+
+  <!-- 계정코드 중복 체크 -->
+  <select id="countByCode" parameterType="int" resultType="int">
+      SELECT COUNT(*)
+      FROM account_subject
+      WHERE code = #{code} AND is_del = 0
+  </select>
+
+  <insert id="insertAccountSubject"
+          parameterType="com.example.toyerp.domain.account.dto.request.AccountSubjectCreateRequest">
+      INSERT INTO account_subject (code, name, type, details)
+      VALUES (#{code}, #{name}, CAST(#{type} AS account_type_enum), #{details})
+  </insert>
+
+  <update id="updateAccountSubject"
+        parameterType="com.example.toyerp.domain.account.dto.request.AccountSubjectUpdateRequest">
+    UPDATE account_subject
+    SET code = #{code}, 
+        name = #{name}, 
+        type = CAST(#{type} AS account_type_enum), 
+        details = #{details}
+    WHERE id = #{id}
+</update>
+
+  <delete id="deleteAccountSubject" parameterType="int">
+    UPDATE account_subject
+    SET is_del = 1
+    WHERE id = #{id}
+  </delete>
+
+</mapper>

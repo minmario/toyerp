@@ -10,13 +10,12 @@ import lombok.Setter;
 @Getter
 @Setter
 public class AccountSubjectVO {
+
     private int id;
     private int code;
     private String name;
     private String type;
     private String details;
     private int isDel;
-
-    // getter/setter
 
 }
