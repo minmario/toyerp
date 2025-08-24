@@ -23,16 +23,16 @@ import { useEffect } from "react";
 type AccountType = "ASSET" | "LIABILITY" | "EQUITY" | "REVENUE" | "EXPENSE";
 type FilterType = "전체" | AccountType;
 
-
 interface Account {
-  id: string;
+  id: number;
+  code: string;
   name: string;
   type: AccountType;
   details: string;
 }
 
 interface NewAccount {
-  id: string;
+  code: string;
   name: string;
   // 새로 추가할 때는 아직 미선택일 수 있으므로 '' 허용
   type: AccountType | "";
@@ -40,21 +40,58 @@ interface NewAccount {
 }
 /** -------------------------------- */
 
+// 영어 -> 한국어 변환 함수
+const getKoreanType = (type: AccountType): string => {
+  switch (type) {
+    case "ASSET":
+      return "자산";
+    case "LIABILITY":
+      return "부채";
+    case "EQUITY":
+      return "자본";
+    case "REVENUE":
+      return "수익";
+    case "EXPENSE":
+      return "비용";
+    default:
+      return type;
+  }
+};
+
+// 한국어 -> 영어 변환 함수 (새로 추가할 때 사용)
+const getEnglishType = (koreanType: string): AccountType => {
+  switch (koreanType) {
+    case "자산":
+      return "ASSET";
+    case "부채":
+      return "LIABILITY";
+    case "자본":
+      return "EQUITY";
+    case "수익":
+      return "REVENUE";
+    case "비용":
+      return "EXPENSE";
+    default:
+      return koreanType as AccountType;
+  }
+};
+
 export function AccountManagement() {
   const [accounts, setAccounts] = useState<Account[]>([]);
+  
   useEffect(() => {
-  fetch("http://localhost:8080/api/accounts")
-    .then((res) => res.json())
-    .then((data: Account[]) => {
-      setAccounts(data);
-    })
-    .catch((err) => {
-      console.error("계정과목 불러오기 실패:", err);
-    });
-}, []);
+    fetch("http://localhost:8080/api/accounts")
+      .then((res) => res.json())
+      .then((data: Account[]) => {
+        setAccounts(data);
+      })
+      .catch((err) => {
+        console.error("계정과목 불러오기 실패:", err);
+      });
+  }, []);
 
   const [newAccount, setNewAccount] = useState<NewAccount>({
-    id: "",
+    code: "",
     name: "",
     type: "",
     details: "",
@@ -67,21 +104,47 @@ export function AccountManagement() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<FilterType>("전체");
 
-  const handleAddAccount = () => {
-    // 간단한 유효성 체크 (선택)
-    if (!newAccount.id || !newAccount.name || !newAccount.type) {
+const handleAddAccount = async () => {
+    // 간단한 유효성 체크
+    if (!newAccount.code || !newAccount.name || !newAccount.type) {
       alert("계정코드, 계정명, 계정유형을 입력해주세요.");
       return;
     }
-    const toAdd: Account = {
-      id: newAccount.id,
-      name: newAccount.name,
-      type: newAccount.type as AccountType,
-      details: newAccount.details,
-    };
-    setAccounts((prev) => [...prev, toAdd]);
-    setNewAccount({ id: "", name: "", type: "", details: "" });
-    setIsDialogOpen(false);
+
+    try {
+      const response = await fetch("http://localhost:8080/api/accounts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          code: parseInt(newAccount.code),
+          name: newAccount.name,
+          type: newAccount.type,
+          details: newAccount.details,
+        }),
+      });
+
+      if (response.ok) {
+        const message = await response.text();
+        alert(message);
+        
+        // 성공적으로 저장되면 목록을 새로고침
+        const updatedAccounts = await fetch("http://localhost:8080/api/accounts")
+          .then((res) => res.json());
+        setAccounts(updatedAccounts);
+        
+        // 폼 초기화
+        setNewAccount({ code: "", name: "", type: "", details: "" });
+        setIsDialogOpen(false);
+      } else {
+        const errorMessage = await response.text();
+        alert(`오류: ${errorMessage}`);
+      }
+    } catch (error) {
+      console.error("계정과목 등록 실패:", error);
+      alert("서버 연결에 실패했습니다. 다시 시도해주세요.");
+    }
   };
 
   const handleEditAccount = (account: Account) => {
@@ -89,28 +152,91 @@ export function AccountManagement() {
     setIsEditDialogOpen(true);
   };
 
-  const handleUpdateAccount = () => {
-    if (!editingAccount) return; // null 가드
-    setAccounts((prev) =>
-      prev.map((acc) => (acc.id === editingAccount.id ? editingAccount : acc))
-    );
-    setEditingAccount(null);
-    setIsEditDialogOpen(false);
-    alert("계정과목이 수정되었습니다.");
-  };
+const handleUpdateAccount = async () => {
+  if (!editingAccount) return;
 
-  const handleDeleteAccount = (accountCode: string) => {
+  // 간단한 유효성 체크
+  if (!editingAccount.code || !editingAccount.name || !editingAccount.type) {
+    alert("계정코드, 계정명, 계정유형을 입력해주세요.");
+    return;
+  }
+
+  try {
+    const response = await fetch(`http://localhost:8080/api/accounts/update`, {
+      method: "POST",  // PUT에서 POST로 변경
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        id: editingAccount.id,  // id 추가
+        code: parseInt(editingAccount.code),
+        name: editingAccount.name,
+        type: editingAccount.type,
+        details: editingAccount.details,
+      }),
+    });
+
+    if (response.ok) {
+      const message = await response.text();
+      alert(message);
+      
+      // 성공적으로 수정되면 목록을 새로고침
+      const updatedAccounts = await fetch("http://localhost:8080/api/accounts")
+        .then((res) => res.json());
+      setAccounts(updatedAccounts);
+      
+      setEditingAccount(null);
+      setIsEditDialogOpen(false);
+    } else {
+      const errorMessage = await response.text();
+      alert(`오류: ${errorMessage}`);
+    }
+  } catch (error) {
+    console.error("계정과목 수정 실패:", error);
+    alert("서버 연결에 실패했습니다. 다시 시도해주세요.");
+  }
+}
+
+  const handleDeleteAccount = async (accountId: number) => {
     if (confirm("정말로 이 계정과목을 삭제하시겠습니까?\n삭제된 계정과목은 복구할 수 없습니다.")) {
-      setAccounts((prev) => prev.filter((acc) => acc.id !== accountCode));
-      alert("계정과목이 삭제되었습니다.");
+      try {
+        const response = await fetch("http://localhost:8080/api/accounts/delete", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            id: accountId,
+          }),
+        });
+
+        if (response.ok) {
+          const message = await response.text();
+          alert(message);
+          
+          // 성공적으로 삭제되면 목록을 새로고침
+          const updatedAccounts = await fetch("http://localhost:8080/api/accounts")
+            .then((res) => res.json());
+          setAccounts(updatedAccounts);
+        } else {
+          const errorMessage = await response.text();
+          alert(`오류: ${errorMessage}`);
+        }
+      } catch (error) {
+        console.error("계정과목 삭제 실패:", error);
+        alert("서버 연결에 실패했습니다. 다시 시도해주세요.");
+      }
     }
   };
 
   const filteredAccounts: Account[] = accounts.filter((account) => {
+    const koreanType = getKoreanType(account.type);
     const matchesSearch =
       account.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      account.id.includes(searchTerm) ||
-      account.details.toLowerCase().includes(searchTerm.toLowerCase());
+      account.code.toString().includes(searchTerm) ||
+      account.details.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      koreanType.toLowerCase().includes(searchTerm.toLowerCase()); // 한국어 유형으로도 검색 가능
+
     const matchesType = filterType === "전체" || account.type === filterType;
     return matchesSearch && matchesType;
   });
@@ -157,8 +283,8 @@ export function AccountManagement() {
                 <Label htmlFor="id">계정코드</Label>
                 <Input
                   id="id"
-                  value={newAccount.id}
-                  onChange={(e) => setNewAccount({ ...newAccount, id: e.target.value })}
+                  value={newAccount.code}
+                  onChange={(e) => setNewAccount({ ...newAccount, code: e.target.value })}
                   placeholder="1500"
                 />
               </div>
@@ -174,9 +300,9 @@ export function AccountManagement() {
               <div className="space-y-2">
                 <Label htmlFor="type">계정유형</Label>
                 <Select
-                  value={newAccount.type}
+                  value={newAccount.type ? getKoreanType(newAccount.type as AccountType) : ""}
                   onValueChange={(value) =>
-                    setNewAccount({ ...newAccount, type: value as AccountType | "" })
+                    setNewAccount({ ...newAccount, type: getEnglishType(value) })
                   }
                 >
                   <SelectTrigger>
@@ -219,14 +345,12 @@ export function AccountManagement() {
                   <Label htmlFor="edit-code">계정코드</Label>
                   <Input
                     id="edit-code"
-                    value={editingAccount.id}
+                    value={editingAccount.code}
                     onChange={(e) =>
-                      setEditingAccount({ ...editingAccount, id: e.target.value })
+                      setEditingAccount({ ...editingAccount, code: e.target.value })
                     }
-                    disabled
-                    className="bg-gray-50"
+                    placeholder="1500"
                   />
-                  <p className="text-xs text-gray-500">계정코드는 수정할 수 없습니다</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-name">계정명</Label>
@@ -242,9 +366,9 @@ export function AccountManagement() {
                 <div className="space-y-2">
                   <Label htmlFor="edit-type">계정유형</Label>
                   <Select
-                    value={editingAccount.type}
+                    value={getKoreanType(editingAccount.type)}
                     onValueChange={(value) =>
-                      setEditingAccount({ ...editingAccount, type: value as AccountType })
+                      setEditingAccount({ ...editingAccount, type: getEnglishType(value) })
                     }
                   >
                     <SelectTrigger>
@@ -296,7 +420,7 @@ export function AccountManagement() {
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
-                placeholder="계정명, 코드로 검색..."
+                placeholder="계정명, 코드, 유형으로 검색..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -308,11 +432,11 @@ export function AccountManagement() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="전체">전체</SelectItem>
-                <SelectItem value="자산">자산</SelectItem>
-                <SelectItem value="부채">부채</SelectItem>
-                <SelectItem value="자본">자본</SelectItem>
-                <SelectItem value="수익">수익</SelectItem>
-                <SelectItem value="비용">비용</SelectItem>
+                <SelectItem value="ASSET">자산</SelectItem>
+                <SelectItem value="LIABILITY">부채</SelectItem>
+                <SelectItem value="EQUITY">자본</SelectItem>
+                <SelectItem value="REVENUE">수익</SelectItem>
+                <SelectItem value="EXPENSE">비용</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -331,10 +455,12 @@ export function AccountManagement() {
             <TableBody>
               {filteredAccounts.map((account: Account) => (
                 <TableRow key={account.id}>
-                  <TableCell className="font-medium">{account.id}</TableCell>
+                  <TableCell className="font-medium">{account.code}</TableCell>
                   <TableCell>{account.name}</TableCell>
                   <TableCell>
-                    <Badge className={getTypeColor(account.type)}>{account.type}</Badge>
+                    <Badge className={getTypeColor(account.type)}>
+                      {getKoreanType(account.type)}
+                    </Badge>
                   </TableCell>
                   <TableCell className="text-gray-600">{account.details}</TableCell>
                   <TableCell>

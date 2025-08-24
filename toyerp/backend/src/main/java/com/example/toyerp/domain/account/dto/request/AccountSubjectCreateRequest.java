@@ -1,4 +1,4 @@
-package com.example.toyerp.domain.account.vo;
+package com.example.toyerp.domain.account.dto.request;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -9,14 +9,11 @@ import lombok.Setter;
 @AllArgsConstructor
 @Getter
 @Setter
-public class AccountSubjectVO {
-    private int id;
+public class AccountSubjectCreateRequest {
     private int code;
     private String name;
     private String type;
     private String details;
-    private int isDel;
-
-    // getter/setter
-
+    
+    // id와 isDel은 제외 (DB에서 자동 처리)
 }

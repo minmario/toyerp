@@ -5,6 +5,7 @@ import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
 import { DashboardContent } from "@/components/dashboard-content"
 import { EmployeeManagement } from "@/components/employee-management"
+import { UserApproval } from "@/components/user-approval"
 import { AccountManagement } from "@/components/account-management"
 import { JournalEntry } from "@/components/journal-entry"
 import { InventoryManagement } from "@/components/inventory-management"
@@ -20,6 +21,8 @@ export default function Dashboard() {
         return <DashboardContent />
       case "employees":
         return <EmployeeManagement />
+      case "user-approval":
+        return <UserApproval />
       case "accounts":
         return <AccountManagement />
       case "journal":
@@ -38,7 +41,7 @@ export default function Dashboard() {
       <Sidebar activeMenu={activeMenu} setActiveMenu={setActiveMenu} userRole={userRole} />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header userRole={userRole} />
-        <main className="flex-1 overflow-y-auto p-6">{renderContent()}</main>
+        <main className="flex-1 overflow-y-auto p-8">{renderContent()}</main>
       </div>
     </div>
   )
