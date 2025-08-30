@@ -71,7 +71,6 @@
     product_id = #{productId},
     transaction_type = CAST(#{transactionType} AS stock_transaction_type),
     quantity = #{quantity},
-    transaction_date = COALESCE(#{transactionDate}, transaction_date),
     details = #{details}
   WHERE id = #{id} AND is_del = 0
 </update>
