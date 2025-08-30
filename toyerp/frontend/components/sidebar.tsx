@@ -1,39 +1,43 @@
 "use client"
 
-import Link from "next/link"
-import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
-  LayoutDashboard, Users, BookOpen, FileText, Package, BarChart3, LogOut, Building2, UserCheck,
+  LayoutDashboard,
+  Users,
+  BookOpen,
+  FileText,
+  Package,
+  BarChart3,
+  LogOut,
+  Building2,
+  UserCheck,
 } from "lucide-react"
 
-type SidebarProps = {
+interface SidebarProps {
+  activeMenu: string
+  setActiveMenu: (menu: string) => void
   userRole: string
-  /** app/console/... 구조면 "/console", app/(console)/... 이면 ""  */
-  basePath?: string
 }
 
-export function Sidebar({ userRole, basePath = "/console" }: SidebarProps) {
-  const pathname = usePathname()
-
+export function Sidebar({ activeMenu, setActiveMenu, userRole }: SidebarProps) {
   const menuItems = [
-    { slug: "dashboard", label: "대시보드", icon: LayoutDashboard, roles: ["admin", "employee"] },
-    { slug: "employees", label: "사원 관리", icon: Users, roles: ["admin"] },
-    { slug: "user-approval", label: "사용자 승인", icon: UserCheck, roles: ["admin"] },
-    { slug: "accounts", label: "계정과목", icon: BookOpen, roles: ["admin", "employee"] },
-    { slug: "journal", label: "전표 입력", icon: FileText, roles: ["admin", "employee"] },
-    { slug: "inventory", label: "재고 관리", icon: Package, roles: ["admin", "employee"] },
-    { slug: "reports", label: "보고서", icon: BarChart3, roles: ["admin", "employee"] },
-  ].filter((m) => m.roles.includes(userRole))
+    { id: "dashboard", label: "대시보드", icon: LayoutDashboard, roles: ["admin", "employee"] },
+    { id: "employees", label: "사원 관리", icon: Users, roles: ["admin"] },
+    { id: "user-approval", label: "사용자 승인", icon: UserCheck, roles: ["admin"] },
+    { id: "accounts", label: "계정과목", icon: BookOpen, roles: ["admin", "employee"] },
+    { id: "journal", label: "전표 입력", icon: FileText, roles: ["admin", "employee"] },
+    { id: "inventory", label: "재고 관리", icon: Package, roles: ["admin", "employee"] },
+    { id: "reports", label: "보고서", icon: BarChart3, roles: ["admin", "employee"] },
+  ]
+
+  const filteredMenuItems = menuItems.filter((item) => item.roles.includes(userRole))
 
   const handleLogout = () => {
     if (confirm("정말 로그아웃 하시겠습니까?")) {
-      // 토큰 키 통일/정리
-      localStorage.removeItem("token")
       localStorage.removeItem("userToken")
       sessionStorage.clear()
-      window.location.href = "/login"
+      window.location.href = "/"
     }
   }
 
@@ -52,28 +56,22 @@ export function Sidebar({ userRole, basePath = "/console" }: SidebarProps) {
       </div>
 
       <nav className="flex-1 p-4 space-y-2">
-        {menuItems.map((item) => {
-          const href = `${basePath}/${item.slug}`.replace(/\/+/g, "/")
-          // 하위 경로까지 활성 처리
-          const active = pathname === href || pathname.startsWith(`${href}/`)
-          return (
-            <Button
-              key={item.slug}
-              variant="ghost"
-              asChild
-              className={cn(
-                "w-full justify-start gap-3 h-12 rounded-xl transition-all duration-200 font-medium",
-                active ? "bg-blue-600 text-white shadow-lg hover:bg-blue-700"
-                       : "text-slate-300 hover:bg-slate-700 hover:text-white",
-              )}
-            >
-              <Link href={href}>
-                <item.icon className="h-5 w-5" />
-                <span>{item.label}</span>
-              </Link>
-            </Button>
-          )
-        })}
+        {filteredMenuItems.map((item) => (
+          <Button
+            key={item.id}
+            variant="ghost"
+            className={cn(
+              "w-full justify-start gap-3 h-12 rounded-xl transition-all duration-200 font-medium",
+              activeMenu === item.id
+                ? "bg-blue-600 text-white shadow-lg hover:bg-blue-700"
+                : "text-slate-300 hover:bg-slate-700 hover:text-white",
+            )}
+            onClick={() => setActiveMenu(item.id)}
+          >
+            <item.icon className="h-5 w-5" />
+            <span>{item.label}</span>
+          </Button>
+        ))}
       </nav>
 
       <div className="p-4 border-t border-slate-700">
