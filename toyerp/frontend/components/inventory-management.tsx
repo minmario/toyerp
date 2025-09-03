@@ -15,6 +15,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+
+//아래 4줄 추가
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Plus, Package, TrendingUp, TrendingDown, Search, RefreshCw, Edit, Trash2 } from "lucide-react"
@@ -76,7 +85,7 @@ export function InventoryManagement() {
   const [newTransaction, setNewTransaction] = useState({
     productId: "",
     type: "입고",
-    quantity: 0,
+    quantity: "",
     note: "",
   })
 
@@ -104,9 +113,8 @@ export function InventoryManagement() {
     id: 0,
     productId: "",         // Select는 string
     type: "입고" as "입고" | "출고",
-    quantity: 0,
+    quantity: "",
     note: "",
-    date: ""               // 선택: "YYYY-MM-DD"
   })
 
   // 백엔드에서 제품 데이터 가져오기
@@ -366,17 +374,46 @@ export function InventoryManagement() {
   }
 }
 
-  // 제품 삭제 (논리 삭제)
-  const handleDeleteProduct = (product: Product) => {
+  // [수정] 제품 삭제 (실제 API 연동)
+  const handleDeleteProduct = async (product: Product) => {
     if (confirm(`정말 "${product.name}" 제품을 삭제하시겠습니까?`)) {
-      alert(`제품 삭제 기능 (${product.name}) - 백엔드 DELETE API 구현 후 사용 가능합니다.`)
+      try {
+        const response = await fetch("http://localhost:8080/api/products/delete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: product.id }),
+        });
+
+        const message = await response.text();
+
+        if (response.ok) {
+          alert(message); // "상품이 성공적으로 삭제되었습니다."
+          await fetchProducts(); // 목록 새로고침
+        } else {
+          // 백엔드에서 보낸 에러 메시지를 그대로 표시
+          alert(`삭제 실패: ${message}`);
+        }
+      } catch (err) {
+        console.error("제품 삭제 오류:", err);
+        alert("제품 삭제 중 오류가 발생했습니다.");
+      }
     }
-  }
+  };
+
+  // [추가] 제품 삭제 가능 여부를 판단하는 함수
+  const isProductDeletable = (productId: number): boolean => {
+    // stockTransactions 배열에서 해당 productId를 가진 '활성'(isDel === 0) 거래가 있는지 확인
+    const hasActiveTransaction = stockTransactions.some(
+      (tx) => tx.productId === productId && tx.isDel === 0
+    );
+    // 활성 거래가 '없어야' 삭제 가능 (true)
+    return !hasActiveTransaction;
+  };
 
 const handleAddTransaction = async () => {
   if (!newTransaction.productId) return alert("제품을 선택해주세요.")
   if (!newTransaction.type) return alert("구분을 선택해주세요.")
-  if (!newTransaction.quantity || newTransaction.quantity <= 0) return alert("수량은 1 이상이어야 합니다.")
+  if (!newTransaction.quantity || Number(newTransaction.quantity) <= 0) return alert("수량은 1 이상이어야 합니다.")
 
   try {
     setTransactionLoading(true)
@@ -399,7 +436,6 @@ const handleAddTransaction = async () => {
       return alert(typeof payload === "string" ? payload : (payload.message ?? "등록 실패"))
     }
 
-
     //알림
     alert(typeof payload === "string" ? payload : (payload.message ?? "입출고 내역이 등록되었습니다."))
 
@@ -407,7 +443,7 @@ const handleAddTransaction = async () => {
     setIsTransactionDialogOpen(false)
 
     //폼 초기화
-    setNewTransaction({ productId: "", type: "입고", quantity: 0, note: "" })
+    setNewTransaction({ productId: "", type: "입고", quantity: "", note: "" })
 
     //목록/재고 갱신
     await fetchProducts()
@@ -427,10 +463,9 @@ const handleEditTransaction = (t: Transaction) => {
     id: t.id,
     productId: String(t.productId),
     type: t.type as "입고" | "출고",
-    quantity: t.quantity,
-    note: t.note || "",
+    quantity: String(t.quantity), // String()으로 감싸기
+    note: t.note || ""
     // ISO 날짜만 추출 (YYYY-MM-DD)
-    date: t.date ? t.date.substring(0, 10) : ""
   })
   setIsTransactionEditDialogOpen(true)
 }
@@ -438,7 +473,7 @@ const handleEditTransaction = (t: Transaction) => {
 const handleUpdateTransaction = async () => {
   if (!editTx.productId) return alert("제품을 선택해주세요.")
   if (!editTx.type) return alert("구분을 선택해주세요.")
-  if (!editTx.quantity || editTx.quantity <= 0) return alert("수량은 1 이상이어야 합니다.")
+  if (!editTx.quantity || Number(editTx.quantity) <= 0) return alert("수량은 1 이상이어야 합니다.")
 
   try {
     setTransactionLoading(true)
@@ -451,8 +486,7 @@ const handleUpdateTransaction = async () => {
         productId: Number(editTx.productId),
         transactionType: editTx.type === "입고" ? "IN" : "OUT", // ENUM에 맞게 변환
         quantity: Number(editTx.quantity),
-        details: editTx.note || "",
-        transactionDate: editTx.date || null
+        details: editTx.note || ""
       })
     })
 
@@ -463,14 +497,11 @@ const handleUpdateTransaction = async () => {
       return alert(typeof payload === "string" ? payload : (payload.message ?? "수정 실패"))
     }
 
-
-
     alert(typeof payload === "string" ? payload : (payload.message ?? "입출고 내역이 수정되었습니다."))
-
     
     // 닫고 초기화
     setIsTransactionEditDialogOpen(false)
-    setEditTx({ id: 0, productId: "", type: "입고", quantity: 0, note: "", date: "" })
+    setEditTx({ id: 0, productId: "", type: "입고", quantity: "", note: ""})
 
     // 목록 갱신
     await fetchProducts()
@@ -484,12 +515,40 @@ const handleUpdateTransaction = async () => {
   }
 }
 
-  // 거래 삭제 (논리 삭제)
-  const handleDeleteTransaction = (transaction: Transaction) => {
+ // 거래 삭제 (논리 삭제) - 백엔드 API 호출 기능 추가
+  const handleDeleteTransaction = async (transaction: Transaction) => {
     if (confirm(`정말 이 거래 내역을 삭제하시겠습니까?\n${transaction.date} - ${transaction.productName} ${transaction.type} ${transaction.quantity}`)) {
-      alert(`거래 삭제 기능 (ID: ${transaction.id}) - 백엔드 DELETE API 구현 후 사용 가능합니다.`)
+      try {
+        // 백엔드 /api/transactions/delete 엔드포인트 호출
+        const response = await fetch(`http://localhost:8080/api/transactions/delete`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          // DTO 형식에 맞춰 body에 id를 JSON으로 전송
+          body: JSON.stringify({ id: transaction.id }),
+        });
+
+        // 백엔드로부터 받은 응답 메시지
+        const message = await response.text();
+
+        if (response.ok) {
+          // 성공 시
+          alert(message); // 예: "입출고 내역이 삭제되었습니다."
+          
+          // 재고와 목록을 최신 상태로 업데이트하기 위해 데이터 새로고침
+          await fetchProducts();
+          await fetchTransactions();
+        } else {
+          // 실패 시
+          alert(`삭제 실패: ${message}`);
+        }
+      } catch (err) {
+        console.error('거래 삭제 중 오류 발생:', err);
+        alert('거래 내역을 삭제하는 중 오류가 발생했습니다.');
+      }
     }
-  }
+  };
 
   const getStockStatus = (current: number, min: number) => {
     if (current === 0) return { label: "품절", color: "bg-red-100 text-red-800" }
@@ -504,7 +563,7 @@ const handleUpdateTransaction = async () => {
       product.category.toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
-  if (loading) {
+  if (loading || transactionLoading) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="text-lg">데이터를 불러오는 중...</div>
@@ -763,14 +822,21 @@ const handleUpdateTransaction = async () => {
                     </SelectContent>
                   </Select>
                 </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="quantity">수량</Label>
                   <Input
                     id="quantity"
                     type="number"
                     value={newTransaction.quantity}
-                    onChange={(e) => setNewTransaction({ ...newTransaction, quantity: Number(e.target.value) })}
-                    placeholder="10"
+                    onChange={(e) => {
+                      // 숫자가 아닌 값이 입력되는 것을 방지하면서 state 업데이트
+                      const value = e.target.value;
+                      if (/^\d*$/.test(value)) {
+                        setNewTransaction({ ...newTransaction, quantity: value });
+                      }
+                    }}
+                  placeholder="10"
                   />
                 </div>
                 <div className="space-y-2">
@@ -833,23 +899,20 @@ const handleUpdateTransaction = async () => {
       </div>
 
       <div className="space-y-2">
-        <Label>수량</Label>
+      <Label>수량</Label>
         <Input
-          type="number"
-          min={1}
-          value={editTx.quantity}
-          onChange={(e) => setEditTx({ ...editTx, quantity: Number(e.target.value) })}
+        type="number"
+        min={1}
+        value={editTx.quantity}
+        onChange={(e) => {
+          const value = e.target.value;
+          if (/^\d*$/.test(value)) {
+            setEditTx({ ...editTx, quantity: value });
+          }
+        }}
         />
       </div>
 
-      <div className="space-y-2">
-        <Label>일자</Label>
-        <Input
-          type="date"
-          value={editTx.date}
-          onChange={(e) => setEditTx({ ...editTx, date: e.target.value })}
-        />
-      </div>
 
       <div className="space-y-2">
         <Label>비고</Label>
@@ -912,6 +975,8 @@ const handleUpdateTransaction = async () => {
                 <TableBody>
                   {filteredProducts.map((product) => {
                     const status = getStockStatus(product.currentStock, product.minStock)
+                    //[추가] 각 제품에 대해 삭제 가능 여부를 미리 계산합니다.
+                    const deletable = isProductDeletable(product.id); 
                     return (
                       <TableRow key={product.id}>
                         <TableCell className="font-medium">{product.code}</TableCell>
@@ -939,14 +1004,33 @@ const handleUpdateTransaction = async () => {
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeleteProduct(product)}
-                              className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                                {/* 👇 [수정] TooltipProvider와 Tooltip으로 삭제 버튼 감싸기 */}
+                            <TooltipProvider delayDuration={100}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                {/* Tooltip이 버튼의 ref를 제대로 받기 위해 div로 한번 감싸줍니다. */}
+                                  <div>
+                                    {/* 👇 [수정] 삭제 버튼 */}
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleDeleteProduct(product)}
+                                      // 'deletable'이 false일 때 버튼을 비활성화합니다.
+                                      disabled={!deletable}
+                                      className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 disabled:opacity-30 disabled:cursor-not-allowed"
+                                      >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </TooltipTrigger>
+                                {/* deletable이 false일 때만 툴팁 내용을 보여줍니다. */}
+                                {!deletable && (
+                                  <TooltipContent>
+                                    <p>입출고 내역이 있어 삭제할 수 없습니다.</p>
+                                   </TooltipContent>
+                                )}
+                              </Tooltip>
+                            </TooltipProvider>
                           </div>
                         </TableCell>
                       </TableRow>

@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.toyerp.domain.inventory.dto.request.StockTransactionCreateRequest;
 import com.example.toyerp.domain.inventory.dto.request.StockTransactionUpdateRequest;
+import com.example.toyerp.domain.inventory.dto.request.StockTransactionDeleteRequest;
 import com.example.toyerp.domain.inventory.service.StockTransactionService;
 import com.example.toyerp.domain.inventory.vo.StockTransactionVO;
 
@@ -70,6 +71,17 @@ public class StockTransactionController {
     } catch (IllegalArgumentException e) {
         return ResponseEntity.badRequest().body(e.getMessage());
     }
+    }
+
+    @PostMapping("/delete")
+    public ResponseEntity<?> delete(@RequestBody StockTransactionDeleteRequest dto) {
+        try {
+            // DTO에서 ID를 꺼내어 서비스로 전달
+            service.deleteTransaction(dto);
+            return ResponseEntity.ok("입출고 내역이 삭제되었습니다.");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
     }
 
 }

@@ -112,4 +112,10 @@
     WHERE id = #{id} AND is_del = 0
   </update>
 
+  <update id="deleteProduct" parameterType="int">
+    UPDATE product
+    SET is_del = 1
+    WHERE id = #{id}
+  </update>
+
 </mapper>

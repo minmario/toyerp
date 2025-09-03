@@ -18,6 +18,9 @@ public interface ProductMapper {
 
     int insertProduct(ProductCreateRequest createDTO);
 
-        // 상품 정보 수정
+    // 상품 정보 수정
     int updateProduct(ProductUpdateRequest updateRequest);
+
+    //[추가] 상품 정보를 소프트 삭제하는(is_del=1로 업데이트) 메소드
+    int deleteProduct(@Param("id") int id);
 }

@@ -21,4 +21,9 @@ public interface StockTransactionMapper {
     int updateTransaction(StockTransactionUpdateRequest req);
 
     Long selectCurrentStock(@Param("productId") int productId);
+
+    int deleteTransaction(@Param("id") int id);
+
+    // [추가] 특정 상품에 연결된 활성(is_del=0) 거래내역 수를 세는 메소드
+    int countActiveTransactionsByProductId(@Param("productId") int productId);
 }

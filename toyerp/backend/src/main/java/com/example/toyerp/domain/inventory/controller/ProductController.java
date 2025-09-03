@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.toyerp.domain.inventory.service.ProductService;
 import com.example.toyerp.domain.inventory.vo.ProductVO;
 import com.example.toyerp.domain.inventory.dto.request.ProductCreateRequest;
+import com.example.toyerp.domain.inventory.dto.request.ProductDeleteRequest;
 import com.example.toyerp.domain.inventory.dto.request.ProductUpdateRequest;
 
 @RestController
@@ -27,27 +28,6 @@ public class ProductController {
         return service.getAllProducts();
     }
 
-    // // ID로 상품 조회
-    // @GetMapping("/{id}")
-    // public ResponseEntity<ProductVO> getProductById(@PathVariable int id) {
-    //     try {
-    //         ProductVO product = service.getProductById(id);
-    //         return ResponseEntity.ok(product);
-    //     } catch (RuntimeException e) {
-    //         return ResponseEntity.notFound().build();
-    //     }
-    // }
-
-    // // 상품코드로 조회
-    // @GetMapping("/code")
-    // public ResponseEntity<ProductVO> getProductByCode(@RequestParam String code) {
-    //     try {
-    //         ProductVO product = service.getProductByCode(code);
-    //         return ResponseEntity.ok(product);
-    //     } catch (RuntimeException e) {
-    //         return ResponseEntity.notFound().build();
-    //     }
-    // }
 
     // 상품 등록
     @PostMapping
@@ -74,6 +54,23 @@ public class ProductController {
             } else {
                 return ResponseEntity.badRequest().body("상품 수정에 실패했습니다. 존재하지 않는 상품이거나 이미 삭제된 상품입니다.");
             }
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("서버 오류가 발생했습니다: " + e.getMessage());
+        }
+    }
+
+    //[추가] 상품 정보 삭제
+    @PostMapping("/delete")
+    public ResponseEntity<String> deleteProduct(@RequestBody ProductDeleteRequest deleteRequest) {
+        try {
+            int result = service.deleteProduct(deleteRequest);
+            if (result > 0) {
+                return ResponseEntity.ok("상품이 성공적으로 삭제되었습니다.");
+            } else {
+                return ResponseEntity.badRequest().body("상품 삭제에 실패했습니다.");
+            }
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body("서버 오류가 발생했습니다: " + e.getMessage());
         }

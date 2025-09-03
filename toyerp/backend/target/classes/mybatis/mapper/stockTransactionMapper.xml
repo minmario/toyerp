@@ -75,6 +75,12 @@
   WHERE id = #{id} AND is_del = 0
 </update>
 
+<update id="deleteTransaction" parameterType="int">
+    UPDATE stock_transaction
+    SET is_del = 1
+    WHERE id = #{id} AND is_del = 0
+</update>
+
 <select id="selectCurrentStock" resultType="long">
   SELECT COALESCE(SUM(
     CASE
@@ -85,6 +91,12 @@
   FROM stock_transaction
   WHERE product_id = #{productId}
     AND is_del = 0
+</select>
+
+<select id="countActiveTransactionsByProductId" parameterType="int" resultType="int">
+    SELECT COUNT(*)
+    FROM stock_transaction
+    WHERE product_id = #{productId} AND is_del = 0
 </select>
 
 </mapper>
